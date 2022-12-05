@@ -1,0 +1,61 @@
+---
+title: "STA 325 Final Project Report"
+author: "Emily Mittleman & Julia Rosner"
+date: '2022-12-05'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(stringr)
+library(knitr)
+library(nnet)
+library(ggplot2)
+library(MASS)
+library(ISLR)
+library(leaps)
+library(glmnet)
+library(mgcv)
+library(car)
+library(splines)
+library(ggpubr)
+```
+
+## Introduction
+
+A few paragraphs which (i) motivate problem importance & relevance (supported by relevant literature, if any), (ii) describe project goals and how such goals address the problem, as well as (iii) a high-level roadmap of the proposed methodology, and (iv) other relevant information for the reader. See project rubric for details.
+
+
+## Data
+
+This should be an extension of the “Data description” section from your proposal. See project rubric for details.
+
+
+## Methodology
+
+Discussion & justification of model choice and features, and how the proposed model(s) fully addresses project goals. Any “downstream” uses of the model (e.g., for prediction, optimization, ranking) should be discussed in detail here. See project rubric for details.
+
+#### Inference
+
+#### Prediction
+
+
+## Results
+
+Statistical analyses of the fitted model(s), and a translation of these findings into meaningful & understandable conclusions for the target audience (e.g., engineers, business managers, policy-makers, etc). See project rubric for details.
+
+#### Inference Results
+
+#### Prediction Results
+
+
+
+## Conclusion
+
+A summary of key findings and potential impacts of your project.
+
+
+

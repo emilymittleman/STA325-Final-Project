@@ -1,0 +1,34 @@
+---
+title: "STA 325 Final Project Proposal"
+author: "Emily Mittleman & Julia Rosner"
+date: '2022-12-05'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(stringr)
+library(knitr)
+library(nnet)
+library(ggplot2)
+library(MASS)
+library(ISLR)
+library(leaps)
+library(glmnet)
+library(mgcv)
+library(car)
+library(splines)
+library(ggpubr)
+```
+
+
+## Load Data
+
+
+
+## EDA
+
+
