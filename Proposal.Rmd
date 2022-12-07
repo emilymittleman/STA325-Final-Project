@@ -22,13 +22,25 @@ library(mgcv)
 library(car)
 library(splines)
 library(ggpubr)
+library(Hmisc)
 ```
 
 
 ## Load Data
 
+```{r}
+data <- read.csv("Data/diabetes_012.csv", header = TRUE)
+```
+
 
 
 ## EDA
+
+```{r}
+head(data)
+```
+
+
+
 
 
