@@ -29,6 +29,15 @@ library(ggpubr)
 A few paragraphs which (i) motivate problem importance & relevance (supported by relevant literature, if any), (ii) describe project goals and how such goals address the problem, as well as (iii) a high-level roadmap of the proposed methodology, and (iv) other relevant information for the reader. See project rubric for details.
 
 
+Diabetes is a serious chronic disease in which individuals lose the ability to effectively regulate levels of glucose in the blood, and can lead to reduced quality of life and life expectancy. There are different types of diabetes, but Type II diabetes mellitus is one of the most common, and Its prevalence varies by age, education, income, location, race, and other social determinants of health. Type 2 diabetes is a leading cause of death for humans around the world. The prevalence of Type II diabetes is increasing rapidly worldwide. According to the CDC, more than 37 million people in the United States have diabetes, and 1 in 5 people are unaware that they have it. Furthermore, the CDC estimates that 96 million people have prediabetes, and 8 in 10 people are unaware of their risk (CDC https://www.cdc.gov/diabetes/basics/quick-facts.html). 
+
+if we want to predict if ppl have diabetes:
+Type 2 diabetes is usually diagnosed for most patients later on in life. People can live healthy and happy lives with diabetes, but early diagnosis can lead to lifestyle changes and more effective treatment. The importance of early detection makes predictive models for diabetes risk important tools for public and public health officials. ... so the aim of our project is to predict diabetes early so that people can make necessary be diagnosed early on
+
+
+if we want to detect risk for developing diabetes:
+Although diabetes is an irreversible disease, it is largely preventable. The risk of developing diabetes will be reduced through early detection and lifestyle interventions.
+ 
 ## Data
 
 This should be an extension of the “Data description” section from your proposal. See project rubric for details.
