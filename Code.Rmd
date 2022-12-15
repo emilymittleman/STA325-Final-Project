@@ -22,9 +22,201 @@ library(mgcv)
 library(car)
 library(splines)
 library(ggpubr)
+library(corrplot)
 ```
 
 
 This file will be used for our initial code while we explore the data, different models, etc. Then we'll compile it into Report.Rmd
 
+### Load Data
+```{r load data}
+data <- read.csv("Data/diabetes_012.csv", header = TRUE)
+```
+
+```{r}
+head(data)
+```
+### Factor Numeric Variables
+
+```{r factor data}
+factored <- data
+```
+
+```{r}
+factored$Diabetes_012 <- as.factor(factored$Diabetes_012)
+factored$HighBP <- as.factor(factored$HighBP)
+factored$CholCheck <- as.factor(factored$CholCheck)
+factored$Smoker <- as.factor(factored$Smoker)
+factored$Stroke <- as.factor(factored$Stroke)
+factored$HeartDiseaseorAttack <- as.factor(factored$HeartDiseaseorAttack)
+factored$PhysActivity <- as.factor(factored$PhysActivity)
+factored$Fruits <- as.factor(factored$Fruits)
+factored$Veggies <- as.factor(factored$Veggies)
+factored$HvyAlcoholConsump <- as.factor(factored$HvyAlcoholConsump)
+factored$AnyHealthcare <- as.factor(factored$AnyHealthcare)
+factored$NoDocbcCost <- as.factor(factored$NoDocbcCost)
+factored$GenHlth <- as.factor(factored$GenHlth)
+factored$MentHlth <- as.factor(factored$MentHlth)
+factored$DiffWalk <- as.factor(factored$DiffWalk)
+factored$Sex <- as.factor(factored$Sex)
+factored$Age <- as.factor(factored$Age)
+factored$Education <- as.factor(factored$Education)
+factored$Income <- as.factor(factored$Income)
+```
+
+Make diabetes response variable binary
+```{r}
+factored$diabetes <- ifelse(factored$Diabetes_012 == 0, 0, 1)
+factored$diabetes <- as.factor(factored$diabetes)
+```
+
+### EDA
+
+Look at correlations between variables. helps to know which attributes are highy dependent on the prediction variable
+```{r correlations}
+correlations <- cor(data)
+correlations
+corrplot(correlations, method="color")
+```
+Next, look at plots of 2 most correlated predictors and color by outcome.
+```{r ggplot}
+ggplot(factored, aes(x = HighBP, fill = diabetes)) +
+  geom_bar(position="fill")
+```
+
+```{r}
+ggplot(factored, aes(x = GenHlth, fill = diabetes)) +
+  geom_bar(position="fill")
+```
+```{r}
+ggplot(factored, aes(x = GenHlth, fill = HighBP)) +
+  geom_bar(position="fill")
+```
+
+## Modeling
+
+Split data train and test
+```{r split data}
+set.seed(17)
+sample <- sample(c(TRUE, FALSE), nrow(factored), replace=TRUE, prob=c(0.7,0.3))
+train  <- factored[sample, ]
+test   <- factored[!sample, ]
+```
+
+
+### Logistic Regression
+
+```{r loog reg}
+glm.fit.all <- glm(diabetes ~ HighBP+ HighChol + CholCheck + HeartDiseaseorAttack + AnyHealthcare
++ PhysActivity + HvyAlcoholConsump + Fruits + Veggies + GenHlth + DiffWalk + Sex + Income + Education + BMI + PhysHlth, 
+               data = factored, family = binomial)
+summary(glm.fit.all)
+```
+```{r}
+glm.probs.all <- predict(glm.fit.all, type = "response")
+glm.probs.all[1:10]
+```
+
+
+```{r}
+glm.pred.all <- rep(0, length(factored$diabetes))
+glm.pred.all[glm.probs.all > 0.5] <- 1
+```
+
+```{r}
+table(glm.pred.all, factored$diabetes)
+```
+
+```{r}
+accuracy <- sum(diag(table(glm.pred.all, factored$diabetes)))/nrow(factored)
+accuracy
+```
+
+Now make model based off of training data:
+
+```{r}
+glm.fit.trainall <- glm(diabetes ~ HighBP+ HighChol + CholCheck + HeartDiseaseorAttack + AnyHealthcare
++ PhysActivity + HvyAlcoholConsump + Fruits + Veggies + GenHlth + DiffWalk + Sex + Income + Education + BMI + PhysHlth, 
+               data = train, family = binomial)
+glm.probs.trainall <- predict(glm.fit.trainall, test, type = "response")
+```
+
+```{r}
+glm.pred.trainall <- rep(0, length(test))
+glm.pred.trainall[glm.probs.trainall > 0.5] <- 1
+table(glm.pred.trainall, test$diabetes)
+```
+```{r}
+accuracy <- sum(diag(table(glm.pred.trainall, test$diabetes)))/nrow(test)
+accuracy
+```
+
+To improve the accuracy we will consider a subset of predictors. Look at correlations to decide. The most correlated to diabetes are GenHlth and HighBP.
+
+```{r}
+glm.fit.cor <- glm(diabetes ~ GenHlth + HighBP, data=train, family = binomial)
+glm.probs.cor <- predict(glm.fit.cor, test, type = "response")
+glm.pred.cor <- rep("no diabetes", length(test))
+glm.pred.cor[glm.probs.cor > 0.5] <- "diabetes"
+table(glm.pred.cor, test$diabetes)
+```
+```{r}
+Accuracy <- (0+5)/(1+18+5+0)
+Accuracy
+```
+
+The subset of predictors made our predictive performance worse.
+
+### KNN
+
+```{r knn}
+#KNN wont knit but works (just takes a while to run)
+#library(class)
+#set.seed(1)
+#knn.pred <- knn(train, test, train$diabetes, k = 10)
+#table(knn.pred, test$diabetes)
+```
+
+```{r}
+#accuracy <- sum(diag(table(knn.pred, test$diabetes)))/nrow(test)
+#accuracy
+```
+
+Perform CV to find best k value....?
+
+### Trees
+
+```{r}
+library(tree)
+```
+
+```{r}
+tree.all <- tree(diabetes ~ HighBP+ HighChol + CholCheck + HeartDiseaseorAttack + AnyHealthcare
++ PhysActivity + HvyAlcoholConsump + Fruits + Veggies + GenHlth + DiffWalk + Sex + Income + Education + BMI + PhysHlth, factored)
+summary(tree.all)
+```
+
+```{r}
+plot(tree.all)
+text(tree.all, pretty = 0)
+```
+```{r}
+set.seed(3)
+cv.tree.all <- cv.tree(tree.all, FUN = prune.misclass)
+names(cv.tree.all)
+```
+
+```{r}
+cv.tree.all
+```
+```{r}
+par(mfrow = c(1,2))
+plot(cv.tree.all$size, cv.tree.all$dev, type = "b")
+plot(cv.tree.all$k, cv.tree.all$dev, type = "b")
+```
+```{r}
+prune.tree <- prune.misclass(tree.all, best = 4)
+plot(prune.tree)
+text(prune.tree, pretty = 0)
+```
 
