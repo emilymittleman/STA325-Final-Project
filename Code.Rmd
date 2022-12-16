@@ -33,9 +33,171 @@ This file will be used for our initial code while we explore the data, different
 data <- read.csv("Data/diabetes_012.csv", header = TRUE)
 ```
 
+
+### EDA
 ```{r}
 head(data)
 ```
+Look at correlations between variables. helps to know which attributes are highy dependent on the prediction variable
+```{r correlations}
+correlations <- cor(data)
+correlations
+corrplot(correlations, method="color")
+```
+
+Next, look at box plots of the 2 most correlated predictors and color by outcome.
+```{r}
+ggplot(data, aes(x = HighBP, fill = factor(Diabetes_012))) +
+  geom_bar(position="fill")
+```
+```{r}
+ggplot(data, aes(x = GenHlth, fill = factor(Diabetes_012))) +
+  geom_bar(position="fill")
+```
+```{r}
+ggplot(data, aes(x = GenHlth, fill = factor(HighBP))) +
+  geom_bar(position="fill")
+```
+Make pivot table to make historgrams of each variable simpler
+```{r}
+data_long <- data %>%                          # Apply pivot_longer function
+  pivot_longer(colnames(data)) %>% 
+  as.data.frame()
+head(data_long)
+```
+Visualize predictor variable distrbutions:
+
+```{r fig.height=10, fig.width=15, fig.fullwidth=TRUE}
+ggp1 <- ggplot(data_long, aes(x = value)) +    # Draw each column as histogram
+  geom_histogram(bins=10) + 
+  facet_wrap(~ name, scales = "free")+ 
+  theme(text=element_text(size=20))
+ggp1
+```
+
+Next, look for outliers in predictors:
+
+```{r make boxplots}
+p1 <- ggplot(data, aes(x = BMI, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="BMI", y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+p2 <- ggplot(data, aes(x = GenHlth, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="GenHlth",y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+p3 <- ggplot(data, aes(x = MentHlth, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="MentHlth", y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+p4 <- ggplot(data, aes(x = PhysHlth, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="PhysHlth",y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+p5 <- ggplot(data, aes(x = Age, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="Age",y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+p6 <- ggplot(data, aes(x = Education, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="Education", y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+p7 <- ggplot(data, aes(x = Income, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="Income", y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+p1
+p2
+p3
+p4
+p5
+p6
+p7
+```
+From the boxplots above, we see that the predictors BMI, MntHlth, and PhysHlth have a lot of outliers. All three distributions aee very skewed to the right. GenHlth and Age have only a couple outliers. Education and Income have none.
+
+Now, we visulaize predictor distributions and relation to response.
+```{r}
+ggplot(data, aes(x = GenHlth, fill = factor(Diabetes_012))) +
+  geom_bar(position="fill")
+ggplot(data, aes(x = GenHlth, fill = factor(Diabetes_012))) +
+  geom_bar(position="fill")
+```
+
+```{r stacked boxplot per variable}
+pbox1 <- ggplot(data, aes(x = HighBP, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="HighBP", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox2 <- ggplot(data, aes(x = HighChol, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="HighChol", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox3 <- ggplot(data, aes(x = CholCheck, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="CholCheck", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox4 <- ggplot(data, aes(x = Smoker, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="Smoker", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox5 <- ggplot(data, aes(x = Stroke, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="Stroke", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox6 <- ggplot(data, aes(x = HeartDiseaseorAttack, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="HeartDiseaseorAttack", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox7 <- ggplot(data, aes(x = PhysActivity, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="PhysActivity", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox8 <- ggplot(data, aes(x = Veggies, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="Veggies", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox9 <- ggplot(data, aes(x = HvyAlcoholConsump, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="HvyAlcoholConsump", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox10 <- ggplot(data, aes(x = AnyHealthcare, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="AnyHealthcare", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox11 <- ggplot(data, aes(x = NoDocbcCost, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="NoDocbcCost", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox12 <- ggplot(data, aes(x = DiffWalk, fill=factor(Diabetes_012))) +
+  geom_bar(position="fill")+
+  labs(title="DiffWalk", y="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+pbox1
+pbox2
+pbox3
+pbox4
+pbox5
+pbox6
+pbox7
+pbox8
+pbox9
+pbox10
+pbox11
+pbox12
+
+```
+
+Next, look at "Age" and its relation to response (diabetes diagnosis):
+
+```{r}
+ggplot(data, aes(x = Age, fill=factor(Diabetes_012))) +
+  geom_bar(position="dodge")+
+  labs(title="Age")+
+  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+```
+
+
 ### Factor Numeric Variables
 
 ```{r factor data}
@@ -70,14 +232,8 @@ factored$diabetes <- ifelse(factored$Diabetes_012 == 0, 0, 1)
 factored$diabetes <- as.factor(factored$diabetes)
 ```
 
-### EDA
+### EDA of factored binary outcome dataset
 
-Look at correlations between variables. helps to know which attributes are highy dependent on the prediction variable
-```{r correlations}
-correlations <- cor(data)
-correlations
-corrplot(correlations, method="color")
-```
 Next, look at plots of 2 most correlated predictors and color by outcome.
 ```{r ggplot}
 ggplot(factored, aes(x = HighBP, fill = diabetes)) +
@@ -88,6 +244,7 @@ ggplot(factored, aes(x = HighBP, fill = diabetes)) +
 ggplot(factored, aes(x = GenHlth, fill = diabetes)) +
   geom_bar(position="fill")
 ```
+
 ```{r}
 ggplot(factored, aes(x = GenHlth, fill = HighBP)) +
   geom_bar(position="fill")
