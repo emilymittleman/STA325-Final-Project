@@ -37,7 +37,15 @@ The prevalence of type II diabetes varies by age, education, income, other socia
  
 ## Data
 
-This should be an extension of the “Data description” section from your proposal. See project rubric for details.
+Our data was obtained from the 2015 Behavioral Risk Factor Surveillance System (BRFSS), which is a health-related telephone survey collected annually by the CDC and gathers responses from over 400,000 Americans on health-related risk behaviors and chronic health conditions. For this project, a CSV of the dataset available on Kaggle was used. This original dataset contains responses from 441,455 individuals and has 330 features. The dataset originally had 330 features, but based on diabetes disease research regarding factors influencing diabetes disease and other chronic health conditions, only 21 select features are included in this analysis. After removing observations with missing values, we were left with 253,680 observations in our dataset.
+
+The response variable is a binary indicator of whether someone does not have diabetes (0), or they do have diabetes or prediabetes (1). 
+
+There are 21 predictors: most are binary indicators, and some are discrete data such as age, BMI, health over the past month, etc. All of these predictors are noninvasive measurements commonly taken in medical settings, and can easily be collected by doctors at physical checkups to be able to run our predictive algorithm in order to determine diabetes risk. 
+
+This dataset is sufficient in meeting our project goals since it has a significantly large number of observations (253,680), and a large number of predictors that can all easily be measured noninvasively in clinical settings.
+
+TALK ABOUT EDA
 
 
 ## Methodology
