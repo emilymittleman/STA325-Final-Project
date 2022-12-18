@@ -41,11 +41,13 @@ Our data was obtained from the 2015 Behavioral Risk Factor Surveillance System (
 
 The response variable is a binary indicator of whether someone does not have diabetes (0), or they do have diabetes or prediabetes (1). 
 
+**TODO:** Add list of predictors
+
 There are 21 predictors: most are binary indicators, and some are discrete data such as age, BMI, health over the past month, etc. All of these predictors are noninvasive measurements commonly taken in medical settings, and can easily be collected by doctors at physical checkups to be able to run our predictive algorithm in order to determine diabetes risk. 
 
 This dataset is sufficient in meeting our project goals since it has a significantly large number of observations (253,680), and a large number of predictors that can all easily be measured noninvasively in clinical settings.
 
-TALK ABOUT EDA
+**TODO:** TALK ABOUT EDA
 
 
 ## Methodology
