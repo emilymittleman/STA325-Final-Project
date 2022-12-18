@@ -23,6 +23,9 @@ library(car)
 library(splines)
 library(ggpubr)
 library(corrplot)
+library(rpart)
+library(caret)
+library(randomForest)
 ```
 
 
@@ -30,28 +33,28 @@ This file will be used for our initial code while we explore the data, different
 
 ### Load Data
 ```{r load data}
-data <- read.csv("Data/diabetes_012.csv", header = TRUE)
-```
+data <- read.csv("Data/diabetes_binary_5050split.csv", header = TRUE)
+colnames(data)[colnames(data) == "Diabetes_binary"] = "diabetes"
 
+data.large <- read.csv("Data/diabetes_binary.csv", header = TRUE)
+colnames(data.large)[colnames(data.large) == "Diabetes_binary"] = "diabetes"
+```
 
 ### EDA
-```{r}
-head(data)
-```
+
 Look at correlations between variables. helps to know which attributes are highy dependent on the prediction variable
 ```{r correlations}
 correlations <- cor(data)
-correlations
 corrplot(correlations, method="color")
 ```
 
 Next, look at box plots of the 2 most correlated predictors and color by outcome.
 ```{r}
-ggplot(data, aes(x = HighBP, fill = factor(Diabetes_012))) +
+ggplot(data, aes(x = HighBP, fill = factor(diabetes))) +
   geom_bar(position="fill")
 ```
 ```{r}
-ggplot(data, aes(x = GenHlth, fill = factor(Diabetes_012))) +
+ggplot(data, aes(x = GenHlth, fill = factor(diabetes))) +
   geom_bar(position="fill")
 ```
 ```{r}
@@ -78,34 +81,36 @@ ggp1
 Next, look for outliers in predictors:
 
 ```{r make boxplots}
-p1 <- ggplot(data, aes(x = BMI, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+diabetes_labels <- c('no', 'yes')
+
+p1 <- ggplot(data, aes(x = BMI, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="BMI", y="Diabetes")+
-  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-p2 <- ggplot(data, aes(x = GenHlth, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p2 <- ggplot(data, aes(x = GenHlth, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="GenHlth",y="Diabetes")+
-  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-p3 <- ggplot(data, aes(x = MentHlth, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p3 <- ggplot(data, aes(x = MentHlth, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="MentHlth", y="Diabetes")+
-  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-p4 <- ggplot(data, aes(x = PhysHlth, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p4 <- ggplot(data, aes(x = PhysHlth, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="PhysHlth",y="Diabetes")+
-  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-p5 <- ggplot(data, aes(x = Age, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p5 <- ggplot(data, aes(x = Age, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="Age",y="Diabetes")+
-  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-p6 <- ggplot(data, aes(x = Education, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p6 <- ggplot(data, aes(x = Education, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="Education", y="Diabetes")+
-  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-p7 <- ggplot(data, aes(x = Income, y=factor(Diabetes_012), color=factor(Diabetes_012))) +
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p7 <- ggplot(data, aes(x = Income, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="Income", y="Diabetes")+
-  scale_color_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
 p1
 p2
 p3
@@ -118,61 +123,61 @@ From the boxplots above, we see that the predictors BMI, MntHlth, and PhysHlth h
 
 Now, we visulaize predictor distributions and relation to response.
 ```{r}
-ggplot(data, aes(x = GenHlth, fill = factor(Diabetes_012))) +
+ggplot(data, aes(x = GenHlth, fill = factor(diabetes))) +
   geom_bar(position="fill")
-ggplot(data, aes(x = GenHlth, fill = factor(Diabetes_012))) +
+ggplot(data, aes(x = GenHlth, fill = factor(diabetes))) +
   geom_bar(position="fill")
 ```
 
 ```{r stacked boxplot per variable}
-pbox1 <- ggplot(data, aes(x = HighBP, fill=factor(Diabetes_012))) +
+pbox1 <- ggplot(data, aes(x = HighBP, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="HighBP", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox2 <- ggplot(data, aes(x = HighChol, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox2 <- ggplot(data, aes(x = HighChol, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="HighChol", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox3 <- ggplot(data, aes(x = CholCheck, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox3 <- ggplot(data, aes(x = CholCheck, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="CholCheck", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox4 <- ggplot(data, aes(x = Smoker, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox4 <- ggplot(data, aes(x = Smoker, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="Smoker", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox5 <- ggplot(data, aes(x = Stroke, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox5 <- ggplot(data, aes(x = Stroke, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="Stroke", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox6 <- ggplot(data, aes(x = HeartDiseaseorAttack, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox6 <- ggplot(data, aes(x = HeartDiseaseorAttack, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="HeartDiseaseorAttack", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox7 <- ggplot(data, aes(x = PhysActivity, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox7 <- ggplot(data, aes(x = PhysActivity, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="PhysActivity", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox8 <- ggplot(data, aes(x = Veggies, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox8 <- ggplot(data, aes(x = Veggies, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="Veggies", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox9 <- ggplot(data, aes(x = HvyAlcoholConsump, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox9 <- ggplot(data, aes(x = HvyAlcoholConsump, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="HvyAlcoholConsump", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox10 <- ggplot(data, aes(x = AnyHealthcare, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox10 <- ggplot(data, aes(x = AnyHealthcare, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="AnyHealthcare", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox11 <- ggplot(data, aes(x = NoDocbcCost, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox11 <- ggplot(data, aes(x = NoDocbcCost, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="NoDocbcCost", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
-pbox12 <- ggplot(data, aes(x = DiffWalk, fill=factor(Diabetes_012))) +
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+pbox12 <- ggplot(data, aes(x = DiffWalk, fill=factor(diabetes))) +
   geom_bar(position="fill")+
   labs(title="DiffWalk", y="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
 pbox1
 pbox2
 pbox3
@@ -191,73 +196,64 @@ pbox12
 Next, look at "Age" and its relation to response (diabetes diagnosis):
 
 ```{r}
-ggplot(data, aes(x = Age, fill=factor(Diabetes_012))) +
+ggplot(data, aes(x = Age, fill=factor(diabetes))) +
   geom_bar(position="dodge")+
   labs(title="Age")+
-  scale_fill_discrete(name="diabetes", labels=c('no', 'prediabetic', 'yes'))
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
 ```
 
 
-### Factor Numeric Variables
-
-```{r factor data}
-factored <- data
-```
-
-```{r}
-factored$Diabetes_012 <- as.factor(factored$Diabetes_012)
-factored$HighBP <- as.factor(factored$HighBP)
-factored$CholCheck <- as.factor(factored$CholCheck)
-factored$Smoker <- as.factor(factored$Smoker)
-factored$Stroke <- as.factor(factored$Stroke)
-factored$HeartDiseaseorAttack <- as.factor(factored$HeartDiseaseorAttack)
-factored$PhysActivity <- as.factor(factored$PhysActivity)
-factored$Fruits <- as.factor(factored$Fruits)
-factored$Veggies <- as.factor(factored$Veggies)
-factored$HvyAlcoholConsump <- as.factor(factored$HvyAlcoholConsump)
-factored$AnyHealthcare <- as.factor(factored$AnyHealthcare)
-factored$NoDocbcCost <- as.factor(factored$NoDocbcCost)
-factored$GenHlth <- as.factor(factored$GenHlth)
-factored$MentHlth <- as.factor(factored$MentHlth)
-factored$DiffWalk <- as.factor(factored$DiffWalk)
-factored$Sex <- as.factor(factored$Sex)
-factored$Age <- as.factor(factored$Age)
-factored$Education <- as.factor(factored$Education)
-factored$Income <- as.factor(factored$Income)
-```
-
-Make diabetes response variable binary
-```{r}
-factored$diabetes <- ifelse(factored$Diabetes_012 == 0, 0, 1)
-factored$diabetes <- as.factor(factored$diabetes)
-```
-
-### EDA of factored binary outcome dataset
+### EDA of data binary outcome dataset
 
 Next, look at plots of 2 most correlated predictors and color by outcome.
 ```{r ggplot}
-ggplot(factored, aes(x = HighBP, fill = diabetes)) +
+ggplot(data, aes(x = HighBP, fill = diabetes)) +
   geom_bar(position="fill")
 ```
 
 ```{r}
-ggplot(factored, aes(x = GenHlth, fill = diabetes)) +
+ggplot(data, aes(x = GenHlth, fill = diabetes)) +
   geom_bar(position="fill")
 ```
 
 ```{r}
-ggplot(factored, aes(x = GenHlth, fill = HighBP)) +
+ggplot(data, aes(x = GenHlth, fill = HighBP)) +
   geom_bar(position="fill")
 ```
 
 ## Modeling
 
-Split data train and test
+### Data preparation
+
+```{r}
+# Factor variables
+data$diabetes <- as.factor(data$diabetes)
+data$HighBP <- as.factor(data$HighBP)
+data$CholCheck <- as.factor(data$CholCheck)
+data$Smoker <- as.factor(data$Smoker)
+data$Stroke <- as.factor(data$Stroke)
+data$HeartDiseaseorAttack <- as.factor(data$HeartDiseaseorAttack)
+data$PhysActivity <- as.factor(data$PhysActivity)
+data$Fruits <- as.factor(data$Fruits)
+data$Veggies <- as.factor(data$Veggies)
+data$HvyAlcoholConsump <- as.factor(data$HvyAlcoholConsump)
+data$AnyHealthcare <- as.factor(data$AnyHealthcare)
+data$NoDocbcCost <- as.factor(data$NoDocbcCost)
+data$GenHlth <- as.factor(data$GenHlth)
+data$MentHlth <- as.factor(data$MentHlth)
+data$DiffWalk <- as.factor(data$DiffWalk)
+data$Sex <- as.factor(data$Sex)
+data$Age <- as.factor(data$Age)
+data$Education <- as.factor(data$Education)
+data$Income <- as.factor(data$Income)
+```
+
 ```{r split data}
+# Split data train and test:
 set.seed(17)
-sample <- sample(c(TRUE, FALSE), nrow(factored), replace=TRUE, prob=c(0.7,0.3))
-train  <- factored[sample, ]
-test   <- factored[!sample, ]
+sample <- sample(c(TRUE, FALSE), nrow(data), replace=TRUE, prob=c(0.7,0.3))
+train  <- data[sample, ]
+test   <- data[!sample, ]
 ```
 
 
@@ -266,7 +262,7 @@ test   <- factored[!sample, ]
 ```{r loog reg}
 glm.fit.all <- glm(diabetes ~ HighBP+ HighChol + CholCheck + HeartDiseaseorAttack + AnyHealthcare
 + PhysActivity + HvyAlcoholConsump + Fruits + Veggies + GenHlth + DiffWalk + Sex + Income + Education + BMI + PhysHlth, 
-               data = factored, family = binomial)
+               data = data, family = binomial)
 summary(glm.fit.all)
 ```
 ```{r}
@@ -276,16 +272,16 @@ glm.probs.all[1:10]
 
 
 ```{r}
-glm.pred.all <- rep(0, length(factored$diabetes))
+glm.pred.all <- rep(0, length(data$diabetes))
 glm.pred.all[glm.probs.all > 0.5] <- 1
 ```
 
 ```{r}
-table(glm.pred.all, factored$diabetes)
+table(glm.pred.all, data$diabetes)
 ```
 
 ```{r}
-accuracy <- sum(diag(table(glm.pred.all, factored$diabetes)))/nrow(factored)
+accuracy <- sum(diag(table(glm.pred.all, data$diabetes)))/nrow(data)
 accuracy
 ```
 
@@ -349,7 +345,7 @@ library(tree)
 
 ```{r}
 tree.all <- tree(diabetes ~ HighBP+ HighChol + CholCheck + HeartDiseaseorAttack + AnyHealthcare
-+ PhysActivity + HvyAlcoholConsump + Fruits + Veggies + GenHlth + DiffWalk + Sex + Income + Education + BMI + PhysHlth, factored)
++ PhysActivity + HvyAlcoholConsump + Fruits + Veggies + GenHlth + DiffWalk + Sex + Income + Education + BMI + PhysHlth, data)
 summary(tree.all)
 ```
 
@@ -376,4 +372,311 @@ prune.tree <- prune.misclass(tree.all, best = 4)
 plot(prune.tree)
 text(prune.tree, pretty = 0)
 ```
+
+
+### Decision Tree
+
+```{r}
+accuracy_tune <- function(fit) {
+    predict_unseen <- predict(fit, test, type = 'class')
+    table_mat <- table(test$diabetes, predict_unseen)
+    accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+    accuracy_Test
+}
+
+control <- rpart.control(maxdepth = 15)
+tune_fit <- rpart(diabetes ~ ., data = train, method = 'class', control = control)
+accuracy_tune(tune_fit)
+```
+
+### Random Forest
+
+```{r}
+set.seed(1)
+# Split data train and test
+sample <- sample(c(TRUE, FALSE), nrow(data), replace=TRUE, prob=c(0.7,0.3))
+train  <- data[sample, ]
+test   <- data[!sample, ]
+
+rf <- readRDS("rf_5050split.rds")
+#rf <- randomForest(diabetes ~., data = train, importance = TRUE, 
+#                   ntree = 300, do.trace = TRUE)
+```
+
+```{r}
+set.seed(1)
+yhat.rf = predict(rf, newdata = test)
+# Confusion Matrix
+(cm = confusionMatrix(test$diabetes, yhat.rf, positive = '1'))
+# Variable Analysis
+importance(rf)
+varImpPlot(rf)
+```
+
+Accuracy: 0.7432
+
+          Reference
+Prediction    0    1
+         0 7234 3432
+         1 2006 8501
+         
+False negative: 0.1621
+False positive: 0.0947
+True negative: 0.3417
+True positive: 0.4015
+
+Sensitivity: 0.7124
+
+BEST PERFORMING MODEL ???
+
+If someone has diabetes, there's a 29% chance they are misclassified as not (3432 / (3432+8501)).
+
+
+
+### Random Forest (removed GenHlth)
+
+```{r}
+data.subset <- subset(data, select = -c(GenHlth))
+
+set.seed(1)
+# Split data train and test
+sample.subset <- sample(c(TRUE, FALSE), nrow(data.subset), replace=TRUE, prob=c(0.7,0.3))
+train.subset  <- data.subset[sample.subset, ]
+test.subset   <- data.subset[!sample.subset, ]
+
+rf.subset <- randomForest(diabetes ~., data = train.subset, importance = TRUE, 
+                          ntree = 300, do.trace = TRUE)
+```
+
+```{r}
+set.seed(1)
+yhat.rf.subset = predict(rf.subset, newdata = test.subset)
+# Confusion Matrix
+(cm.subset = confusionMatrix(test.subset$diabetes, yhat.rf.subset, positive = '1'))
+# Variable Analysis
+importance(rf.subset)
+varImpPlot(rf.subset)
+```
+Accuracy: 0.7322
+
+          Reference
+Prediction    0    1
+         0 7003 3612
+         1 2099 8612
+
+Sensitivity : 0.7045
+
+Didn't perform as well as previous model, so ignore this.
+
+
+#### Over-Sampled Data
+
+```{r}
+data.large$diabetes <- as.factor(data.large$diabetes)
+data.large$HighBP <- as.factor(data.large$HighBP)
+data.large$CholCheck <- as.factor(data.large$CholCheck)
+data.large$Smoker <- as.factor(data.large$Smoker)
+data.large$Stroke <- as.factor(data.large$Stroke)
+data.large$HeartDiseaseorAttack <- as.factor(data.large$HeartDiseaseorAttack)
+data.large$PhysActivity <- as.factor(data.large$PhysActivity)
+data.large$Fruits <- as.factor(data.large$Fruits)
+data.large$Veggies <- as.factor(data.large$Veggies)
+data.large$HvyAlcoholConsump <- as.factor(data.large$HvyAlcoholConsump)
+data.large$AnyHealthcare <- as.factor(data.large$AnyHealthcare)
+data.large$NoDocbcCost <- as.factor(data.large$NoDocbcCost)
+data.large$GenHlth <- as.factor(data.large$GenHlth)
+data.large$MentHlth <- as.factor(data.large$MentHlth)
+data.large$DiffWalk <- as.factor(data.large$DiffWalk)
+data.large$Sex <- as.factor(data.large$Sex)
+data.large$Age <- as.factor(data.large$Age)
+data.large$Education <- as.factor(data.large$Education)
+data.large$Income <- as.factor(data.large$Income)
+```
+
+```{r}
+set.seed(1)
+# Remove duplicate rows (24206 duplicate)
+data.large <- data.large[!duplicated(data.large), ]
+
+# Split data into training and test
+sample.large <- sample(c(TRUE, FALSE), nrow(data.large), replace=TRUE, prob=c(0.7,0.3))
+train.large  <- data.large[sample.large, ]
+test.large   <- data.large[!sample.large, ]
+nrow(data.large)
+nrow(train.large)
+nrow(test.large)
+
+# Sample from diabetes-1 classifications to balance dataset
+class_0 = data.large[data.large['diabetes'] == 0,]
+class_1 = data.large[data.large['diabetes'] == 1,]
+class_1_over = class_1[sample(nrow(class_1), nrow(class_0), replace = TRUE), ]
+data.large.sampled = rbind(class_1_over, class_0)
+
+# Split over-sampled data into training and test
+sample.large.sampled <- sample(c(TRUE, FALSE), nrow(data.large.sampled), replace=TRUE, prob=c(0.7,0.3))
+train.large.sampled  <- data.large.sampled[sample.large.sampled, ]
+test.large.sampled   <- data.large.sampled[!sample.large.sampled, ]
+nrow(data.large.sampled)
+nrow(train.large.sampled)
+nrow(test.large.sampled)
+```
+
+### Random Forest on Full Dataset
+
+```{r}
+set.seed(1)
+rf.large <- readRDS("rf_large_nosample.rds")
+#rf.large <- randomForest(diabetes ~., data = train.large, importance = TRUE, 
+#                   ntree = 300, do.trace = TRUE)
+```
+
+```{r}
+#saveRDS(rf.large, "rf_large_nosample.rds")
+```
+
+```{r}
+set.seed(1)
+yhat.rf.large = predict(rf.large, newdata = test.large)
+# Confusion Matrix
+(cm.large = confusionMatrix(test.large$diabetes, yhat.rf.large, positive = '1'))
+# Variable Analysis
+importance(rf.large)
+varImpPlot(rf.large)
+```
+Accuracy: 0.8518
+
+          Reference
+Prediction     0     1
+         0 56887  1475
+         1  8736  1787
+
+False negative: 0.0214
+False positive: 0.1268
+True negative: 0.8258
+True positive: 0.0259
+
+Sensitivity: 0.5478
+
+
+BEST PERFORMING MODEL ?
+
+If someone has diabetes, there's a 45% chance they are misclassified as not (1475 / (1475+1787)).
+
+
+### Random Forest on Over-Sampled Data
+
+MISLEADING RESULTS: With over-sampling, test set will contain entries from 
+training so cannot rely on hold-out predictions.
+
+```{r}
+set.seed(1)
+#rf.large.sampled <- randomForest(diabetes ~., data = train.large.sampled, importance = TRUE, 
+#                                ntree = 300, do.trace = TRUE)
+```
+
+```{r}
+# set.seed(1)
+# # Remove duplicates from test set
+# test.large.nodup <- test.large.sampled[!duplicated(test.large.sampled), ]
+# yhat.rf.large.nodup = predict(rf.large.sampled, newdata = test.large.nodup)
+# # Confusion Matrix
+# (cm.large.nodup = confusionMatrix(test.large.nodup$diabetes, yhat.rf.large.nodup))
+# # Variable Analysis
+# importance(rf.large.sampled)
+# varImpPlot(rf.large.sampled)
+```
+
+(With sampling, test set removed duplicates):
+
+Accuracy: 0.9237
+
+          Reference
+Prediction     0     1
+         0 52708  5553
+         1  1056 27256
+         
+False negative: 0.064
+False positive: 0.014
+True negative: 0.5418
+True positive: 0.314
+
+
+```{r}
+# set.seed(1)
+# yhat.rf.large.wdup = predict(rf.large.sampled, newdata = test.large.sampled)
+# # Confusion Matrix
+# (cm.large.wdup = confusionMatrix(test.large.sampled$diabetes, yhat.rf.large.wdup))
+```
+
+(With sampling, test set containing duplicates):
+
+Accuracy: 0.9354
+
+          Reference
+Prediction     0     1
+         0 52721  5540
+         1  1987 56252
+
+### Random Forest on Full Data (Subset)
+
+```{r}
+# Removing least important variables based on Random Forest results
+data.large.subset <- subset(data.large, select = -c(CholCheck))
+```
+
+
+```{r}
+set.seed(1)
+# Split data train and test
+# sample.large.subset <- sample(c(TRUE, FALSE), nrow(data.large.subset), replace=TRUE, prob=c(0.7,0.3))
+# train.large.subset  <- data.large.subset[sample.large.subset, ]
+# test.large.subset   <- data.large.subset[!sample.large.subset, ]
+# 
+# rf.large.subset <- randomForest(diabetes ~., data = train.large.subset, importance = TRUE, 
+#                                 ntree = 300, do.trace = TRUE)
+```
+
+```{r}
+# set.seed(1)
+# yhat.rf.large.subset = predict(rf.large.subset, newdata = test.large.subset)
+# # Confusion Matrix
+# (cm.large.subset = confusionMatrix(test.large.subset$diabetes, yhat.rf.large.subset))
+# # Variable Analysis
+# importance(rf.large.subset)
+# varImpPlot(rf.large.subset)
+```
+
+Accuracy: 0.8519
+
+          Reference
+Prediction     0     1
+         0 56872  1490
+         1  8712  1811
+
+False negative: 0.0216
+False positive: 0.1264
+True negative: 0.8256
+True positive: 0.0263
+
+
+Not really better than full model rf (rf.large), so ignore.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
