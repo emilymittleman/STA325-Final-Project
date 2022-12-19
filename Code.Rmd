@@ -35,9 +35,12 @@ This file will be used for our initial code while we explore the data, different
 ```{r load data}
 data <- read.csv("Data/diabetes_binary_5050split.csv", header = TRUE)
 colnames(data)[colnames(data) == "Diabetes_binary"] = "diabetes"
+data <- data[!duplicated(data), ]
 
 data.large <- read.csv("Data/diabetes_binary.csv", header = TRUE)
 colnames(data.large)[colnames(data.large) == "Diabetes_binary"] = "diabetes"
+# Remove duplicate rows (24206 duplicate)
+data.large <- data.large[!duplicated(data.large), ]
 ```
 
 ### EDA
@@ -495,8 +498,6 @@ data.large$Income <- as.factor(data.large$Income)
 
 ```{r}
 set.seed(1)
-# Remove duplicate rows (24206 duplicate)
-data.large <- data.large[!duplicated(data.large), ]
 
 # Split data into training and test
 sample.large <- sample(c(TRUE, FALSE), nrow(data.large), replace=TRUE, prob=c(0.7,0.3))
