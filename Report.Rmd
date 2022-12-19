@@ -31,7 +31,6 @@ library(caret)
 library(randomForest)
 library(kableExtra)
 library(cvms)
-library(reprtree)
 ```
 
 ## Introduction
@@ -215,7 +214,15 @@ varImpPlot(rf)
 
 ## Conclusion
 
-A summary of key findings and potential impacts of your project.
+Key findings: genHLth important predictor for diabetes.
+
+The high accuracy and high sensitivity of our model suggests that its predictive performance is very good. Therefore, our model can be very effective for identifying individuals with diabetes and indicating whether an individual is at high risk for developing diabetes. Since our data model relies on noninvasive health factors that can be gathered through a simple survey, our model can be applied in all healthcare settings, and is inclusive of all patients, regardless of their socioeconomic status. Since diabetes Type II disproportionately affects racial and ethnic minority and low-income adult populations in the U.S., our model can help people in these populations detect diabetes risk and take steps to prevent it or receive treatment sooner.
+
+The implications of our model are significant, and therefore it is important that it be used properly. For example, it could be used for harm if we were to sell it to insurance companies, who could then significantly raise premiums for high risk insurance members. Such uses would increase the burden h=that diabetes causes racial and ethnic minorities and low-income populations, and would further reduce equitable access to healthcare. Therefore, we leave our model in the hands of medical professionals in healthcare settings only. 
+
+Furthermore, there are some limitations to our models capabilities. Firstly, since a random forest combines multiple decision trees, it is very difficult to interpret. Therefore, the model cannot provide a patient at high risk for diabetes with feedback on which health factors were the most influential in the patients classification. As a result, they would need to make changes to their lifestyle to improve their health metrics for all predictors. Secondly, while our model is very accurate in predicting diabetes, it is not a diagnosis and cannot be used as one. Diabetes is diagnosed by measuring glucose levels in the blood, and data on glucose levels are nowhere included in our model. Thirdly, since our model is a random forest composed of a large number of trees, the algorithm can be slow to run. This could be a drawback in clinical settings where many patients are being seen at once. Thus, this limitation could potentially make our model ineffective for immediate, real-time predictions.
+
+
 
 
 
