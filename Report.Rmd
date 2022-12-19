@@ -31,6 +31,7 @@ library(caret)
 library(randomForest)
 library(kableExtra)
 library(cvms)
+library(reprtree)
 ```
 
 ## Introduction
@@ -170,9 +171,9 @@ We want a highly accurate predictive model, but more specifically, we are lookin
 
 After exploring logistic regression, K-nearest neighbors, and decision tree classifiers, we were not satisfied with the accuracy of these models. Since the performance of these simpler models showed much room for improvement, we further explored Random Forest Classifiers. We expected random forests to perform better compared to decision trees because it uses multiple decision trees to get the optimal result by choosing the majority among them as the best value. Random forests have a smaller chance of overfitting since we are using multiple decision trees, and it has greater accuracy since it runs on a larger data set.
 
-We chose Random Forest over using Support Vector Machine (SVM) because SVM is inefficient as the number of data points grows very large, and we have two data sets that we need to train every model on (constructed by under and oversampling the data due to class imbalances) which have training set sizes of 48,221 and 272,030 respectively. Since the number of observations is very large, we chose random forests over SVM.
+We chose Random Forest over using Support Vector Machine (SVM) because SVM is inefficient as the number of data points grows very large, and we have two data sets that we need to train every model on (constructed by under and oversampling the data due to class imbalances) which have 70,692 and 321,178 observations respectively. Since the number of observations is very large, we chose random forests over SVM.
 
-The best performing random forest was trained using the undersampled dataset where we had removed negative class observations to be balanced with the positive class. We did a 70/30 training-test data split in which we trained the model on 70% of our data, and then validated it on the remaining 30% of unseen data to evaluate its predictive performance. The model had 90% accuracy, and more importantly, a sensitivity of 89%. This gave us confidence in our model that it is able to predict new data points very well without being overfit, and this model missed the lowest number of positive cases giving us confidence that it won’t misclassify diabetics as wrongly predicting they are not diabetic. 
+The best performing random forest was trained using the undersampled dataset where we had removed negative class observations to be balanced with the positive class. After confirming that our model outperformed any other model we created thus far, as it had extremely high accuracy and sensitivity, we trained our final model. We did a 70/30 training-test data split in which we trained the model on 70% of our data, and then validated it on the remaining 30% of unseen data to evaluate its predictive performance. The model had 90% accuracy, and more importantly, a sensitivity of 89%. This gave us confidence in our model that it is able to predict new data points very well without being overfit, and this model missed the lowest number of positive cases giving us confidence that it won’t misclassify diabetics as wrongly predicting they are not diabetic. 
 
 ```{r, echo=FALSE, warning=FALSE}
 confusion = tribble(
@@ -205,6 +206,11 @@ kable(model.comparison, caption = "Model Comparisons") %>%
 
 Statistical analyses of the fitted model(s), and a translation of these findings into meaningful & understandable conclusions for the target audience (e.g., engineers, business managers, policy-makers, etc). See project rubric for details.
 
+```{r}
+rf <- readRDS("rf_5050split.rds")
+importance(rf)
+varImpPlot(rf)
+```
 
 
 ## Conclusion
