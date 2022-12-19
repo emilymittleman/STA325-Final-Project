@@ -400,6 +400,7 @@ set.seed(1)
 sample <- sample(c(TRUE, FALSE), nrow(data), replace=TRUE, prob=c(0.7,0.3))
 train  <- data[sample, ]
 test   <- data[!sample, ]
+nrow(train)
 
 rf <- readRDS("rf_5050split.rds")
 #rf <- randomForest(diabetes ~., data = train, importance = TRUE, 
@@ -416,21 +417,16 @@ importance(rf)
 varImpPlot(rf)
 ```
 
-Accuracy: 0.7432
+Accuracy: 0.8999
 
           Reference
 Prediction    0    1
-         0 7234 3432
-         1 2006 8501
-         
-False negative: 0.1621
-False positive: 0.0947
-True negative: 0.3417
-True positive: 0.4015
+         0 8987 1197
+         1  889 9763
 
-Sensitivity: 0.7124
+Sensitivity: 0.8908
 
-BEST PERFORMING MODEL ???
+BEST PERFORMING MODEL !!!!
 
 If someone has diabetes, there's a 29% chance they are misclassified as not (3432 / (3432+8501)).
 
@@ -447,18 +443,18 @@ sample.subset <- sample(c(TRUE, FALSE), nrow(data.subset), replace=TRUE, prob=c(
 train.subset  <- data.subset[sample.subset, ]
 test.subset   <- data.subset[!sample.subset, ]
 
-rf.subset <- randomForest(diabetes ~., data = train.subset, importance = TRUE, 
-                          ntree = 300, do.trace = TRUE)
+# rf.subset <- randomForest(diabetes ~., data = train.subset, importance = TRUE, 
+#                           ntree = 300, do.trace = TRUE)
 ```
 
 ```{r}
-set.seed(1)
-yhat.rf.subset = predict(rf.subset, newdata = test.subset)
-# Confusion Matrix
-(cm.subset = confusionMatrix(test.subset$diabetes, yhat.rf.subset, positive = '1'))
-# Variable Analysis
-importance(rf.subset)
-varImpPlot(rf.subset)
+# set.seed(1)
+# yhat.rf.subset = predict(rf.subset, newdata = test.subset)
+# # Confusion Matrix
+# (cm.subset = confusionMatrix(test.subset$diabetes, yhat.rf.subset, positive = '1'))
+# # Variable Analysis
+# importance(rf.subset)
+# varImpPlot(rf.subset)
 ```
 Accuracy: 0.7322
 
