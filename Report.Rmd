@@ -22,6 +22,7 @@ library(mgcv)
 library(car)
 library(splines)
 library(ggpubr)
+library(kableExtra)
 ```
 
 ## Introduction
@@ -41,9 +42,38 @@ Our data was obtained from the 2015 Behavioral Risk Factor Surveillance System (
 
 The response variable is a binary indicator of whether someone does not have diabetes (0), or they do have diabetes or prediabetes (1). 
 
-**TODO:** Add list of predictors
-
 There are 21 predictors: most are binary indicators, and some are discrete data such as age, BMI, health over the past month, etc. All of these predictors are noninvasive measurements commonly taken in medical settings, and can easily be collected by doctors at physical checkups to be able to run our predictive algorithm in order to determine diabetes risk. 
+
+```{r, echo=FALSE}
+predictor.table = rbind(c("High BP", "Has high blood pressure", "Binary"),
+    c("High cholesterol", "Ever had high cholesterol", "Binary"),
+    c("Cholesterol check", "Cholesterol check within past five years", "Binary"),
+    c("BMI", "Body Mass Index", "Discrete (1-98)"),
+    c("Smoker", "Smoked at least 100 cigarettes in entire life", "Binary"),
+    c("Stroke", "Ever had a stroke", "Binary"),
+    c("Heart disease", "Ever had coronary heart disease", "Binary"),
+    c("Physical activity", "Exercised within the past 30 days", "Binary"),
+    c("Fruits", "Consume fruit 1 or more times per day", "Binary"),
+    c("Vegetables", "Consume vegetables 1 or more times per day", "Binary"),
+    c("Heavy alcohol use", "Men: >14 drinks weekly, Women: >7 drinks weekly", "Binary"),
+    c("Any healthcare", "Has any kind of health care coverage", "Binary"),
+    c("No doctor (cost)", "Needed doctor in past year but couldn't go due to cost", "Binary"),
+    c("General health", "Scale of 1-5", "Discrete (1-5)"),
+    c("Mental health", "Days of poor mental health in past 30 days", "Discrete (1-30)"),
+    c("Physical health", "Physical illness or injury in past 30 days", "Discrete (1-30)"),
+    c("Difficulty walking", "Difficulty walking or climbing stairs", "Binary"),
+    c("Sex", "Male or Female", "Binary"),
+    c("Age", "Which age group (18-24, 24-30,...)", "Discrete (1-13)"),
+    c("Education", "Highest level of education (None, elementary,...)", "Discrete (1-6)"),
+    c("Income", "Annual income bracket (<$10k, $10k-$15k,...)", "Discrete (1-8)"))
+
+colnames(predictor.table) = c("Predictor", "Description", "Data Type")
+
+kable(predictor.table, caption = "Predictor Descriptions") %>%
+  row_spec(0, bold=TRUE) %>% 
+  kable_styling(font_size=10, latex_options = "HOLD_position")
+```
+
 
 This dataset is sufficient in meeting our project goals since it has a significantly large number of observations (253,680), and a large number of predictors that can all easily be measured noninvasively in clinical settings.
 
