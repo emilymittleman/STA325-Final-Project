@@ -84,18 +84,10 @@ This dataset is sufficient in meeting our project goals since it has a significa
 
 Discussion & justification of model choice and features, and how the proposed model(s) fully addresses project goals. Any “downstream” uses of the model (e.g., for prediction, optimization, ranking) should be discussed in detail here. See project rubric for details.
 
-#### Inference
-
-#### Prediction
-
 
 ## Results
 
 Statistical analyses of the fitted model(s), and a translation of these findings into meaningful & understandable conclusions for the target audience (e.g., engineers, business managers, policy-makers, etc). See project rubric for details.
-
-#### Inference Results
-
-#### Prediction Results
 
 
 
