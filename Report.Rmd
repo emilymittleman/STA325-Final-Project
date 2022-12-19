@@ -22,18 +22,20 @@ library(mgcv)
 library(car)
 library(splines)
 library(ggpubr)
+library(corrplot)
+library(rpart)
+library(caret)
+library(randomForest)
 library(kableExtra)
 ```
 
 ## Introduction
 
-A few paragraphs which (i) motivate problem importance & relevance (supported by relevant literature, if any), (ii) describe project goals and how such goals address the problem, as well as (iii) a high-level roadmap of the proposed methodology, and (iv) other relevant information for the reader. See project rubric for details.
-
 Diabetes is a serious chronic disease in which individuals lose the ability to effectively regulate levels of glucose in the blood. There are different types of diabetes, but Type II diabetes mellitus is the most common. If left untreated, Type II diabetes can cause major health complications, including heart attack, kidney failure, stroke, and eye damage. In fact, Type II diabetes was the 7th leading cause of death in 2019; and unfortunately, its prevalence is rapidly increasing worldwide (CDC). According to the CDC, more than 37 million people in the United States have diabetes, and 1 in 5 people are unaware that they have it. Furthermore, approximately 96 million Americans (1 in 3) have prediabetes, and a shocking 80% of those Americans are unaware of their risk (CDC). Type II diabetes and prediabetes often begin as silent conditions, and so they often go undiagnosed for years with no clear symptoms, until serious health complications develop.
 
-Although diabetes is an irreversible disease, it is largely preventable. The risk of developing diabetes can be reduced significantly through early detection of prediabetes and lifestyle interventions. While type 2 diabetes and prediabetes can be easily diagnosed through glucose blood testing, many people fail to test regularly. Therefore, evaluating diabetes risk through metrics other than glucose levels can prove to be extraordinarily valuable.
+Although diabetes is an irreversible disease, it is largely preventable. The risk of developing diabetes can be reduced significantly through early detection of prediabetes and lifestyle interventions. While type 2 diabetes and prediabetes can be easily diagnosed through glucose blood testing, many people fail to test regularly. Access to healthcare and health insurance plays a large role in testing, diagnosis, and risk factors. Without it, Type II diabetes is difficult to detect early on. As a consequence, research shows that diabetes affects racial and ethnic minority and low-income adult populations in the U.S. disproportionately (Briggs). Therefore, evaluating diabetes risk through metrics other than glucose levels can prove to be extraordinarily valuable.
 
-The prevalence of type II diabetes varies by age, education, income, other social determinants of health, and a variety of health indicators/factors regularly screened for at routine check ups. We aim to build an ML model to (1) identify individuals with diabetes or prediabetes, who could otherwise go undiagnosed, and (2) indicate individuals who show early signs (or are at risk) for prediabetes. Clinicians can then implement this model as a part of annual physical exams. If a clinician sees a result that indicates diabetes risk, then they can proceed with a glucose level test to determine whether or not there is a diagnosis. If there is a diagnosis they can proceed with the medical protocols/advice established. However, what separates our model, even if there is no diagnosis (for diabetes or prediabetes aka no extreme blood sugar levels yet), the model still indicated the patient was at risk, and so the patient can then be proactive in lowering their risk for pre diabetes / type II diabetes, and implement preventative measures. 
+The prevalence of type II diabetes varies by age, education, income, other social determinants of health, risk behaviors, and chronic health conditions. For our project, we use these indicators to build a predictive model that aims to (1) identify individuals with diabetes, who could otherwise go undiagnosed, and (2) indicate individuals who are at high risk for diabetes. Our model is meant to be implemented by any medical professional, and used in all healthcare settings, from clinics to private practices. A major differentiator for our model is that it is accessible to all individuals – including those without a regular physician and who have limited health records. Clinicians can then implement our model as a part of any and all healthcare visits. If a clinician sees a result that indicates diabetes risk, then they can proceed with a glucose level test to determine whether or not there is a diagnosis. If there is a diagnosis they can proceed with the medical protocols/advice established. However, what separates our model is even if there is no diagnosis, then the model still indicates that the patient was at risk, and so the patient can then be proactive in lowering their risk for Type II diabetes, and implement preventative measures. 
 
  
 ## Data
@@ -77,7 +79,78 @@ kable(predictor.table, caption = "Predictor Descriptions") %>%
 
 This dataset is sufficient in meeting our project goals since it has a significantly large number of observations (253,680), and a large number of predictors that can all easily be measured noninvasively in clinical settings.
 
-**TODO:** TALK ABOUT EDA
+### EDA
+
+To help guide our model selection, we investigated our data further in our exploratory data analysis. We began our EDA by searching for any null and duplicate values. We then dropped all of the null and duplicate values from our dataset. 
+
+Next, we looked at variable distributions and correlations to understand our dataset better. First, we explored the distribution of the response variable diabetes. The original diabetes variable has 3 levels that indicates an individual’s diabetes diagnosis. Level 0 indicates that the individual does not have diabetes, level 1 indicates that the individual has prediabetes, and level 2 indicates that the individual has diabetes. We found that the data distribution across these three levels was very unbalanced. The no diabetes class (level 0) made up a very large majority of the observations. Meanwhile, there were hardly any observations for the prediabetes class (level 1). Since there were so few observations for prediabetes, we decided to merge the prediabetes and diabetes classes into one. Even still, there was a very uneven split between the diabetes and no diabetes classes.
+
+```{r, echo=FALSE}
+data <- read.csv("Data/diabetes_binary_5050split.csv", header = TRUE)
+colnames(data)[colnames(data) == "Diabetes_binary"] = "diabetes"
+data.large <- read.csv("Data/diabetes_binary.csv", header = TRUE)
+colnames(data.large)[colnames(data.large) == "Diabetes_binary"] = "diabetes"
+diabetes_labels <- c('No 0', 'Yes 1 (merged prediabetes)')
+
+p1 <- ggplot(data.large, aes(x = factor(diabetes), fill = factor(diabetes))) +
+  geom_bar()+
+  labs(title="Unbalanced",x="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+
+p2<-ggplot(data, aes(x = factor(diabetes), fill = factor(diabetes))) +
+  geom_bar()+
+  labs(title="Balanced",x="Diabetes")+
+  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+
+ggarrange(p1,p2)
+```
+
+
+We were concerned that this uneven split would hurt our model’s prediction accuracy, which is the core objective of our model. Therefore, we attempted two methods to handle the imbalanced data: the first method was to undersample the negative class, and the other was to oversample the positive class.
+
+1) In undersampling the data, we removed observations that were classified as not having diabetes in order to make the number of observations classified as having diabetes equal to the number not having diabetes. This resulted in an equal split of the dataset consisting of 35,346 observations classified as diabetes = YES and 35,346 observations classified as diabetes = NO, for a total of 70,692 observations in the dataset. The downside to undersampling is we remove a lot of useful data from the negative class in order to balance out the two classes, resulting in a smaller dataset and less observations to train models on.
+
+2) For the second method, we tried to oversample the data. We upsampled observations that were classified as diabetes = YES in order to make the number of observations classified as having diabetes equal to the number not having diabetes. This resulted in an equal split of the dataset consisting of 194,377 observations classified as diabetes = YES (which now contains duplicates) and 194,377 observations classified as diabetes = NO, for a total of 388,754 observations in the dataset. The benefit of oversampling is we get to utilize all negative class observations so we have a larger dataset, but the downside is we have duplicate values for the positive class observations. To combat any issues with duplicate values that can arise when training and validating models, we first split up the original dataset into training and test sets, and then only oversample the training set. This is very important because if there are tons of duplicate values between the training and test sets, then we won’t be able to accurately access the model on the holdout test set because the model would have been trained on many of those observations.
+
+Then, we looked at the distributions of our predictor variables.
+```{r fig.height=10, fig.width=15, fig.fullwidth=TRUE, echo=FALSE}
+data_long <- data %>%                          # Apply pivot_longer function
+  pivot_longer(colnames(data)) %>% 
+  as.data.frame()
+
+ggp1 <- ggplot(data_long, aes(x = value)) +    # Draw each column as histogram
+  geom_histogram(bins=10) + 
+  facet_wrap(~ name, scales = "free")+ 
+  theme(text=element_text(size=20))
+
+ggp1
+```
+We can see that all of our variables are binary or discrete. Out of the discrete variables, only the Age, BMI, and GenHlth variables follow a roughly normal distribution (the Education, Income, PhysHlth, and MentHlth variables do not). Also, many of the binary variables have very nonuniform distributions, including AnyHealthcare, HeartDiseaseorAttack, Stroke, HvyAlcoholConsump, etc. These not normal and not uniform variable distributions could pose a problem in our modeling if they are highly correlated with diabetes.
+
+We further explored these variables by checking to see if they had any outliers. We found that the only the predictors BMI, MntHlth, and PhysHlth had a lot of outliers, which are shown below. However, in the end, we decided not to transform our variables for our final model. This is because scaling is not necessary for random forests, and random forests are also not sensitive to outliers.
+```{r}
+p11 <- ggplot(data, aes(x = BMI, y=factor(diabetes), color=factor(diabetes))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="BMI", y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p22 <- ggplot(data, aes(x = MentHlth, y=factor(diabetes), color=factor(diabetes))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="MentHlth",y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+p33 <- ggplot(data, aes(x = PhysHlth, y=factor(diabetes), color=factor(diabetes))) +
+  geom_boxplot(outlier.shape=8, outlier.size=4)+
+  labs(title="PhysHlth", y="Diabetes")+
+  scale_color_discrete(name="diabetes", labels=diabetes_labels)
+ggarrange(p11,p22,p33)
+```
+
+Next, we looked at the correlations between our predictor variables.
+```{r, echo=FALSE}
+correlations <- cor(data)
+corrplot(correlations, method="color")
+```
+Several variables seem to be correlated to each other, however, random forests work by taking subsections of the predictors. Thus, our random forest model handles multicollinearity itself, and we do not need to take any action here. 
+
 
 
 ## Methodology
