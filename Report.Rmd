@@ -30,6 +30,7 @@ library(rpart)
 library(caret)
 library(randomForest)
 library(kableExtra)
+library(cvms)
 ```
 
 ## Introduction
@@ -173,9 +174,32 @@ We chose Random Forest over using Support Vector Machine (SVM) because SVM is in
 
 The best performing random forest was trained using the undersampled dataset where we had removed negative class observations to be balanced with the positive class. We did a 70/30 training-test data split in which we trained the model on 70% of our data, and then validated it on the remaining 30% of unseen data to evaluate its predictive performance. The model had 90% accuracy, and more importantly, a sensitivity of 89%. This gave us confidence in our model that it is able to predict new data points very well without being overfit, and this model missed the lowest number of positive cases giving us confidence that it won’t misclassify diabetics as wrongly predicting they are not diabetic. 
 
+```{r, echo=FALSE, warning=FALSE}
+confusion = tribble(
+  ~Prediction, ~Reference, ~n,
+  "0", "0", 8987,
+  "1", "0", 889,
+  "0", "1", 1197,
+  "1", "1", 9763)
+
+plot_confusion_matrix(confusion, target_col = "Reference", 
+                      prediction_col = "Prediction", counts_col = "n")
+```
+
+
 To be absolutely sure this model was the best random forest, we tried training on the full dataset without sampling, the undersampled data, and oversampled data. For each of these methods, we trained multiple models on different subsets of the predictors, but we found that including all predictors gave the most accurate predictions every time. After trying many iterations of different models, we were confident that we found the best performing model having the highest accuracy and sensitivity. We conclude our search for and training of our predictive model, and move on to discuss the results we found from our final predictive random forest model.
 
+```{r, echo=FALSE}
+model.comparison = rbind(c("Undersampled", "90%", "89.1%"),
+    c("Full", "85.2%", "54.8%"),
+    c("Oversampled", "79.8%", "38.1%"))
 
+colnames(model.comparison) = c("Training Dataset", "Accuracy", "Sensitivity")
+
+kable(model.comparison, caption = "Model Comparisons") %>%
+  row_spec(0, bold=TRUE) %>% 
+  kable_styling(font_size=12, latex_options = "HOLD_position")
+```
 
 ## Results
 
