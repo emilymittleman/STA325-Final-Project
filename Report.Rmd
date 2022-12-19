@@ -2,7 +2,10 @@
 title: "STA 325 Final Project Report"
 author: "Emily Mittleman & Julia Rosner"
 date: '2022-12-05'
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -90,7 +93,7 @@ data <- read.csv("Data/diabetes_binary_5050split.csv", header = TRUE)
 colnames(data)[colnames(data) == "Diabetes_binary"] = "diabetes"
 data.large <- read.csv("Data/diabetes_binary.csv", header = TRUE)
 colnames(data.large)[colnames(data.large) == "Diabetes_binary"] = "diabetes"
-diabetes_labels <- c('No 0', 'Yes 1 (merged prediabetes)')
+diabetes_labels <- c('No 0', 'Yes 1')
 
 p1 <- ggplot(data.large, aes(x = factor(diabetes), fill = factor(diabetes))) +
   geom_bar()+
@@ -113,22 +116,25 @@ We were concerned that this uneven split would hurt our model’s prediction acc
 2) For the second method, we tried to oversample the data. We upsampled observations that were classified as diabetes = YES in order to make the number of observations classified as having diabetes equal to the number not having diabetes. This resulted in an equal split of the dataset consisting of 194,377 observations classified as diabetes = YES (which now contains duplicates) and 194,377 observations classified as diabetes = NO, for a total of 388,754 observations in the dataset. The benefit of oversampling is we get to utilize all negative class observations so we have a larger dataset, but the downside is we have duplicate values for the positive class observations. To combat any issues with duplicate values that can arise when training and validating models, we first split up the original dataset into training and test sets, and then only oversample the training set. This is very important because if there are tons of duplicate values between the training and test sets, then we won’t be able to accurately access the model on the holdout test set because the model would have been trained on many of those observations.
 
 Then, we looked at the distributions of our predictor variables.
-```{r fig.height=10, fig.width=15, fig.fullwidth=TRUE, echo=FALSE}
+
+```{r, echo=FALSE}
 data_long <- data %>%                          # Apply pivot_longer function
   pivot_longer(colnames(data)) %>% 
   as.data.frame()
 
 ggp1 <- ggplot(data_long, aes(x = value)) +    # Draw each column as histogram
   geom_histogram(bins=10) + 
-  facet_wrap(~ name, scales = "free")+ 
-  theme(text=element_text(size=20))
+  facet_wrap(~ name, scales = "free")# + 
+  #theme(text=element_text(size=20))
 
 ggp1
 ```
+
 We can see that all of our variables are binary or discrete. Out of the discrete variables, only the Age, BMI, and GenHlth variables follow a roughly normal distribution (the Education, Income, PhysHlth, and MentHlth variables do not). Also, many of the binary variables have very nonuniform distributions, including AnyHealthcare, HeartDiseaseorAttack, Stroke, HvyAlcoholConsump, etc. These not normal and not uniform variable distributions could pose a problem in our modeling if they are highly correlated with diabetes.
 
 We further explored these variables by checking to see if they had any outliers. We found that the only the predictors BMI, MntHlth, and PhysHlth had a lot of outliers, which are shown below. However, in the end, we decided not to transform our variables for our final model. This is because scaling is not necessary for random forests, and random forests are also not sensitive to outliers.
-```{r}
+
+```{r, echo=FALSE}
 p11 <- ggplot(data, aes(x = BMI, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="BMI", y="Diabetes")+
@@ -141,21 +147,34 @@ p33 <- ggplot(data, aes(x = PhysHlth, y=factor(diabetes), color=factor(diabetes)
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="PhysHlth", y="Diabetes")+
   scale_color_discrete(name="diabetes", labels=diabetes_labels)
-ggarrange(p11,p22,p33)
+ggarrange(p11,p22,p33, ncol=3)
 ```
 
 Next, we looked at the correlations between our predictor variables.
+
 ```{r, echo=FALSE}
 correlations <- cor(data)
 corrplot(correlations, method="color")
 ```
+
 Several variables seem to be correlated to each other, however, random forests work by taking subsections of the predictors. Thus, our random forest model handles multicollinearity itself, and we do not need to take any action here. 
 
 
 
 ## Methodology
 
-Discussion & justification of model choice and features, and how the proposed model(s) fully addresses project goals. Any “downstream” uses of the model (e.g., for prediction, optimization, ranking) should be discussed in detail here. See project rubric for details.
+Our main goal of predicting whether an individual has diabetes or is at risk requires us to focus on making the most accurate predictive algorithm. Interpretability of the model is not important for our goals since doctors know what factors lead to higher risk of diabetes; we want a model that can take into account numerous medical, behavioral, and environmental factors of an individual and based on the combination of all of these things, flag to the doctor whether they are predicted to have a high risk of being a diabetic. We are not necessarily trying to have doctors learn from our model, but rather use our algorithm as a precaution in case doctors miss the signs of diabetes. Since we are not concerned with inference, we focused on making more complex models to achieve greater predictive power.
+
+We want a highly accurate predictive model, but more specifically, we are looking for high accuracy in detecting when someone is at risk or has diabetes. Since the model will be used to flag cases of potential diabetics, we need to reduce the possibility of missing these cases as much as possible: it is better for the model to output more false positives than false negatives, because a false positive can be corrected by running blood tests on the individual to determine that they don’t actually have diabetes, while a false negative means the doctor would miss this case and leave the individual undiagnosed which is extremely problematic and directly opposes the intention of this study. Since we are trying to optimize for correctly classifying all positive cases of diabetes, the most important metric we use to assess model fit is the sensitivity rate. In tandem, we also look at overall model accuracy, because a model that predicts a positive result for all inputs would have an extremely high sensitivity, but this means every individual would be predicted to have diabetes and lots of unnecessary testing which is bad. Overall, we want an accurate model that minimizes misclassifying positive cases as negative. 
+
+After exploring logistic regression, K-nearest neighbors, and decision tree classifiers, we were not satisfied with the accuracy of these models. Since the performance of these simpler models showed much room for improvement, we further explored Random Forest Classifiers. We expected random forests to perform better compared to decision trees because it uses multiple decision trees to get the optimal result by choosing the majority among them as the best value. Random forests have a smaller chance of overfitting since we are using multiple decision trees, and it has greater accuracy since it runs on a larger data set.
+
+We chose Random Forest over using Support Vector Machine (SVM) because SVM is inefficient as the number of data points grows very large, and we have two data sets that we need to train every model on (constructed by under and oversampling the data due to class imbalances) which have training set sizes of 48,221 and 272,030 respectively. Since the number of observations is very large, we chose random forests over SVM.
+
+The best performing random forest was trained using the undersampled dataset where we had removed negative class observations to be balanced with the positive class. We did a 70/30 training-test data split in which we trained the model on 70% of our data, and then validated it on the remaining 30% of unseen data to evaluate its predictive performance. The model had 90% accuracy, and more importantly, a sensitivity of 89%. This gave us confidence in our model that it is able to predict new data points very well without being overfit, and this model missed the lowest number of positive cases giving us confidence that it won’t misclassify diabetics as wrongly predicting they are not diabetic. 
+
+To be absolutely sure this model was the best random forest, we tried training on the full dataset without sampling, the undersampled data, and oversampled data. For each of these methods, we trained multiple models on different subsets of the predictors, but we found that including all predictors gave the most accurate predictions every time. After trying many iterations of different models, we were confident that we found the best performing model having the highest accuracy and sensitivity. We conclude our search for and training of our predictive model, and move on to discuss the results we found from our final predictive random forest model.
+
 
 
 ## Results
