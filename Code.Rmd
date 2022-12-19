@@ -469,7 +469,7 @@ Sensitivity : 0.7045
 Didn't perform as well as previous model, so ignore this.
 
 
-#### Over-Sampled Data
+#### Load Full Data
 
 ```{r}
 data.large$diabetes <- as.factor(data.large$diabetes)
@@ -505,21 +505,8 @@ test.large   <- data.large[!sample.large, ]
 nrow(data.large)
 nrow(train.large)
 nrow(test.large)
-
-# Sample from diabetes-1 classifications to balance dataset
-class_0 = data.large[data.large['diabetes'] == 0,]
-class_1 = data.large[data.large['diabetes'] == 1,]
-class_1_over = class_1[sample(nrow(class_1), nrow(class_0), replace = TRUE), ]
-data.large.sampled = rbind(class_1_over, class_0)
-
-# Split over-sampled data into training and test
-sample.large.sampled <- sample(c(TRUE, FALSE), nrow(data.large.sampled), replace=TRUE, prob=c(0.7,0.3))
-train.large.sampled  <- data.large.sampled[sample.large.sampled, ]
-test.large.sampled   <- data.large.sampled[!sample.large.sampled, ]
-nrow(data.large.sampled)
-nrow(train.large.sampled)
-nrow(test.large.sampled)
 ```
+
 
 ### Random Forest on Full Dataset
 
@@ -561,61 +548,6 @@ Sensitivity: 0.5478
 BEST PERFORMING MODEL ?
 
 If someone has diabetes, there's a 45% chance they are misclassified as not (1475 / (1475+1787)).
-
-
-### Random Forest on Over-Sampled Data
-
-MISLEADING RESULTS: With over-sampling, test set will contain entries from 
-training so cannot rely on hold-out predictions.
-
-```{r}
-set.seed(1)
-#rf.large.sampled <- randomForest(diabetes ~., data = train.large.sampled, importance = TRUE, 
-#                                ntree = 300, do.trace = TRUE)
-```
-
-```{r}
-# set.seed(1)
-# # Remove duplicates from test set
-# test.large.nodup <- test.large.sampled[!duplicated(test.large.sampled), ]
-# yhat.rf.large.nodup = predict(rf.large.sampled, newdata = test.large.nodup)
-# # Confusion Matrix
-# (cm.large.nodup = confusionMatrix(test.large.nodup$diabetes, yhat.rf.large.nodup))
-# # Variable Analysis
-# importance(rf.large.sampled)
-# varImpPlot(rf.large.sampled)
-```
-
-(With sampling, test set removed duplicates):
-
-Accuracy: 0.9237
-
-          Reference
-Prediction     0     1
-         0 52708  5553
-         1  1056 27256
-         
-False negative: 0.064
-False positive: 0.014
-True negative: 0.5418
-True positive: 0.314
-
-
-```{r}
-# set.seed(1)
-# yhat.rf.large.wdup = predict(rf.large.sampled, newdata = test.large.sampled)
-# # Confusion Matrix
-# (cm.large.wdup = confusionMatrix(test.large.sampled$diabetes, yhat.rf.large.wdup))
-```
-
-(With sampling, test set containing duplicates):
-
-Accuracy: 0.9354
-
-          Reference
-Prediction     0     1
-         0 52721  5540
-         1  1987 56252
 
 ### Random Forest on Full Data (Subset)
 
@@ -662,6 +594,43 @@ True positive: 0.0263
 Not really better than full model rf (rf.large), so ignore.
 
 
+### Random Forest on Over-Sampled Data AFTER TRAINING
+
+```{r}
+set.seed(1)
+# Sample from diabetes-1 classifications to balance dataset
+class_0 = train.large[train.large['diabetes'] == 0,]
+class_1 = train.large[train.large['diabetes'] == 1,]
+class_1_over = class_1[sample(nrow(class_1), nrow(class_0), replace = TRUE), ]
+train.large.sampled = rbind(class_1_over, class_0)
+nrow(train.large.sampled)
+```
+
+```{r}
+set.seed(1)
+# rf.large.sampled <- randomForest(diabetes ~., data = train.large.sampled, importance = TRUE, 
+#                                 ntree = 300, do.trace = TRUE)
+```
+
+```{r}
+# set.seed(1)
+# yhat.rf.large.sampled = predict(rf.large.sampled, newdata = test.large)
+# # Confusion Matrix
+# (cm.large.sampled = confusionMatrix(test.large$diabetes, yhat.rf.large.sampled, positive = '1'))
+# # Variable Analysis
+# importance(rf.large.sampled)
+# varImpPlot(rf.large.sampled)
+```
+Accuracy: 0.7981
+
+          Reference
+Prediction     0     1
+         0 49524  8838
+         1  5071  5452
+
+Sensitivity: 0.38153
+
+REALLY BAD RESULTS-- DEFINITELY BAD MODEL
 
 
 
