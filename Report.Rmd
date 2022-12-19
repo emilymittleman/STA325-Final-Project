@@ -1,7 +1,9 @@
 ---
 title: "STA 325 Final Project Report"
 author: "Emily Mittleman & Julia Rosner"
-date: '2022-12-05'
+date: '2022-12-18'
+header-includes:
+  - \usepackage{subfig}
 output:
   pdf_document: default
   html_document:
@@ -19,11 +21,6 @@ library(nnet)
 library(ggplot2)
 library(MASS)
 library(ISLR)
-library(leaps)
-library(glmnet)
-library(mgcv)
-library(car)
-library(splines)
 library(ggpubr)
 library(corrplot)
 library(rpart)
@@ -31,9 +28,11 @@ library(caret)
 library(randomForest)
 library(kableExtra)
 library(cvms)
+library(gridExtra)
+library(grid)
 ```
 
-## Introduction
+# Introduction
 
 Diabetes is a serious chronic disease in which individuals lose the ability to effectively regulate levels of glucose in the blood. There are different types of diabetes, but Type II diabetes mellitus is the most common. If left untreated, Type II diabetes can cause major health complications, including heart attack, kidney failure, stroke, and eye damage. In fact, Type II diabetes was the 7th leading cause of death in 2019; and unfortunately, its prevalence is rapidly increasing worldwide (CDC). According to the CDC, more than 37 million people in the United States have diabetes, and 1 in 5 people are unaware that they have it. Furthermore, approximately 96 million Americans (1 in 3) have prediabetes, and a shocking 80% of those Americans are unaware of their risk (CDC). Type II diabetes and prediabetes often begin as silent conditions, and so they often go undiagnosed for years with no clear symptoms, until serious health complications develop.
 
@@ -42,11 +41,19 @@ Although diabetes is an irreversible disease, it is largely preventable. The ris
 The prevalence of type II diabetes varies by age, education, income, other social determinants of health, risk behaviors, and chronic health conditions. For our project, we use these indicators to build a predictive model that aims to (1) identify individuals with diabetes, who could otherwise go undiagnosed, and (2) indicate individuals who are at high risk for diabetes. Our model is meant to be implemented by any medical professional, and used in all healthcare settings, from clinics to private practices. A major differentiator for our model is that it is accessible to all individuals – including those without a regular physician and who have limited health records. Clinicians can then implement our model as a part of any and all healthcare visits. If a clinician sees a result that indicates diabetes risk, then they can proceed with a glucose level test to determine whether or not there is a diagnosis. If there is a diagnosis they can proceed with the medical protocols/advice established. However, what separates our model is even if there is no diagnosis, then the model still indicates that the patient was at risk, and so the patient can then be proactive in lowering their risk for Type II diabetes, and implement preventative measures. 
 
  
-## Data
+# Data
 
-Our data was obtained from the 2015 Behavioral Risk Factor Surveillance System (BRFSS), which is a health-related telephone survey collected annually by the CDC and gathers responses from over 400,000 Americans on health-related risk behaviors and chronic health conditions. For this project, a CSV of the dataset available on Kaggle was used. This original dataset contains responses from 441,455 individuals and has 330 features. The dataset originally had 330 features, but based on diabetes disease research regarding factors influencing diabetes disease and other chronic health conditions, only 21 select features are included in this analysis. After removing observations with missing values, we were left with 253,680 observations in our dataset.
+Our data was obtained from the 2015 Behavioral Risk Factor Surveillance System (BRFSS), which is a health-related telephone survey collected annually by the CDC and gathers responses from over 400,000 Americans on health-related risk behaviors and chronic health conditions. For this project, a CSV of the dataset available on Kaggle was used. This original dataset contains responses from 441,455 individuals and has 330 features. 
 
-The response variable is a binary indicator of whether someone does not have diabetes (0), or they do have diabetes or prediabetes (1). 
+This dataset is sufficient in meeting our project goals since it has a significantly large number of observations, and a large number of predictors that can all easily be measured noninvasively in clinical settings.
+
+The response variable is an indicator of whether someone does not have diabetes (0) or has diabetes (1).
+
+## Data Cleaning
+
+The dataset originally had 330 features, but based on diabetes disease research regarding factors influencing diabetes disease and other chronic health conditions, only 21 select features are included in this analysis. We then dropped any observations containing null values and duplicate observations from the dataset. After removing null and duplicate values, we were left with ~230,000 observations.
+
+The original diabetes response variable has 3 levels that indicates an individual’s diabetes diagnosis. Level 0 indicates that the individual does not have diabetes, level 1 indicates that the individual has prediabetes, and level 2 indicates that the individual has diabetes. We found that the data distribution across these three levels was very unbalanced. The no diabetes class (level 0) made up a very large majority of the observations. Meanwhile, there were hardly any observations for the prediabetes class (level 1). Since there were so few observations for prediabetes and prediabetes is very similar biologically to diabetes, we decided to merge the prediabetes and diabetes classes into one.
 
 There are 21 predictors: most are binary indicators, and some are discrete data such as age, BMI, health over the past month, etc. All of these predictors are noninvasive measurements commonly taken in medical settings, and can easily be collected by doctors at physical checkups to be able to run our predictive algorithm in order to determine diabetes risk. 
 
@@ -81,32 +88,56 @@ kable(predictor.table, caption = "Predictor Descriptions") %>%
 ```
 
 
-This dataset is sufficient in meeting our project goals since it has a significantly large number of observations (253,680), and a large number of predictors that can all easily be measured noninvasively in clinical settings.
+## EDA
 
-### EDA
+To help guide our model selection, we investigated our data further in our exploratory data analysis.  
 
-To help guide our model selection, we investigated our data further in our exploratory data analysis. We began our EDA by searching for any null and duplicate values. We then dropped all of the null and duplicate values from our dataset. 
+We looked at variable distributions and correlations to understand our dataset better. First, we explored the distribution of the response variable diabetes. Even after combining the multiclass variable into a binary response of 0 = no diabetes and 1 = diabetes or prediabetes, there was a very uneven split between the positive and negative classes.
 
-Next, we looked at variable distributions and correlations to understand our dataset better. First, we explored the distribution of the response variable diabetes. The original diabetes variable has 3 levels that indicates an individual’s diabetes diagnosis. Level 0 indicates that the individual does not have diabetes, level 1 indicates that the individual has prediabetes, and level 2 indicates that the individual has diabetes. We found that the data distribution across these three levels was very unbalanced. The no diabetes class (level 0) made up a very large majority of the observations. Meanwhile, there were hardly any observations for the prediabetes class (level 1). Since there were so few observations for prediabetes, we decided to merge the prediabetes and diabetes classes into one. Even still, there was a very uneven split between the diabetes and no diabetes classes.
+```{r, echo=FALSE, out.height = '.7\\linewidth', fig.align='center'}
+data <- read.csv("Data/diabetes_binary.csv", header = TRUE)
+colnames(data)[colnames(data) == "Diabetes_binary"] = "diabetes"
+diabetes_labels <- c('No - 0', 'Yes - 1')
+data.nofactor <- data
+
+p1 <- ggplot(data, aes(x = factor(diabetes), fill = factor(diabetes))) +
+  geom_bar()+
+  labs(title="Diabetes Imbalance", x="Diabetes")+
+  scale_fill_manual(values=c(blues9[4], blues9[8]),
+                    labels = diabetes_labels,
+                    name = "Has Diabetes")
+  #scale_fill_discrete(name="diabetes", labels=diabetes_labels)
+
+p1
+```
 
 ```{r, echo=FALSE}
-data <- read.csv("Data/diabetes_binary_5050split.csv", header = TRUE)
-colnames(data)[colnames(data) == "Diabetes_binary"] = "diabetes"
-data.large <- read.csv("Data/diabetes_binary.csv", header = TRUE)
-colnames(data.large)[colnames(data.large) == "Diabetes_binary"] = "diabetes"
-diabetes_labels <- c('No 0', 'Yes 1')
+correlations <- cor(data)
+```
 
-p1 <- ggplot(data.large, aes(x = factor(diabetes), fill = factor(diabetes))) +
-  geom_bar()+
-  labs(title="Unbalanced",x="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
-
-p2<-ggplot(data, aes(x = factor(diabetes), fill = factor(diabetes))) +
-  geom_bar()+
-  labs(title="Balanced",x="Diabetes")+
-  scale_fill_discrete(name="diabetes", labels=diabetes_labels)
-
-ggarrange(p1,p2)
+```{r, echo=FALSE}
+data$diabetes <- as.factor(data$diabetes)
+data$HighBP <- as.factor(data$HighBP)
+data$HighChol <- as.factor(data$HighChol)
+data$BMI <- as.factor(data$BMI)
+data$CholCheck <- as.factor(data$CholCheck)
+data$Smoker <- as.factor(data$Smoker)
+data$Stroke <- as.factor(data$Stroke)
+data$HeartDiseaseorAttack <- as.factor(data$HeartDiseaseorAttack)
+data$PhysActivity <- as.factor(data$PhysActivity)
+data$Fruits <- as.factor(data$Fruits)
+data$Veggies <- as.factor(data$Veggies)
+data$HvyAlcoholConsump <- as.factor(data$HvyAlcoholConsump)
+data$AnyHealthcare <- as.factor(data$AnyHealthcare)
+data$NoDocbcCost <- as.factor(data$NoDocbcCost)
+data$GenHlth <- as.factor(data$GenHlth)
+data$MentHlth <- as.factor(data$MentHlth)
+data$PhysHlth <- as.factor(data$PhysHlth)
+data$DiffWalk <- as.factor(data$DiffWalk)
+data$Sex <- as.factor(data$Sex)
+data$Age <- as.factor(data$Age)
+data$Education <- as.factor(data$Education)
+data$Income <- as.factor(data$Income)
 ```
 
 
@@ -119,42 +150,46 @@ We were concerned that this uneven split would hurt our model’s prediction acc
 Then, we looked at the distributions of our predictor variables.
 
 ```{r, echo=FALSE}
-data_long <- data %>%                          # Apply pivot_longer function
-  pivot_longer(colnames(data)) %>% 
+data.subset <- subset(data, select = -c(MentHlth, PhysHlth))
+colnames(data.subset)[colnames(data.subset) == "AnyHealthcare"] = "Healthcare"
+colnames(data.subset)[colnames(data.subset) == "HeartDiseaseorAttack"] = "HeartDisease"
+colnames(data.subset)[colnames(data.subset) == "HvyAlcoholConsump"] = "Alcohol"
+colnames(data.subset)[colnames(data.subset) == "NoDocbcCost"] = "NoDocCost"
+
+data_long <- data.subset %>%                          # Apply pivot_longer function
+  pivot_longer(colnames(data.subset)) %>% 
   as.data.frame()
 
 ggp1 <- ggplot(data_long, aes(x = value)) +    # Draw each column as histogram
-  geom_histogram(bins=10) + 
-  facet_wrap(~ name, scales = "free")# + 
-  #theme(text=element_text(size=20))
+  geom_bar() + 
+  facet_wrap(~ name, scales = "free")
 
 ggp1
 ```
 
-We can see that all of our variables are binary or discrete. Out of the discrete variables, only the Age, BMI, and GenHlth variables follow a roughly normal distribution (the Education, Income, PhysHlth, and MentHlth variables do not). Also, many of the binary variables have very nonuniform distributions, including AnyHealthcare, HeartDiseaseorAttack, Stroke, HvyAlcoholConsump, etc. These not normal and not uniform variable distributions could pose a problem in our modeling if they are highly correlated with diabetes.
+We can see that all of our variables are binary or discrete. Out of the discrete variables, only the Age, BMI, and GenHlth variables follow a roughly normal distribution (Education and Income do not). Also, many of the binary variables have very non-uniform distributions, including Alcohol, Cholesterol check, Difficulty walking, Stroke, etc. These non-normal and non-uniform variable distributions could pose a problem in our modeling if they are highly correlated with diabetes.
 
-We further explored these variables by checking to see if they had any outliers. We found that the only the predictors BMI, MntHlth, and PhysHlth had a lot of outliers, which are shown below. However, in the end, we decided not to transform our variables for our final model. This is because scaling is not necessary for random forests, and random forests are also not sensitive to outliers.
+We further explored these variables by checking to see if they had any outliers. We found that only the predictors BMI, Mental health, and Physical health had a lot of outliers. However, in the end, we decided not to transform our variables for our final model because scaling is not necessary for random forests, and random forests are also not sensitive to outliers.
 
-```{r, echo=FALSE}
-p11 <- ggplot(data, aes(x = BMI, y=factor(diabetes), color=factor(diabetes))) +
+```{r, echo=FALSE, fig.align='center'}
+p11 <- ggplot(data.nofactor, aes(x = BMI, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="BMI", y="Diabetes")+
   scale_color_discrete(name="diabetes", labels=diabetes_labels)
-p22 <- ggplot(data, aes(x = MentHlth, y=factor(diabetes), color=factor(diabetes))) +
+p22 <- ggplot(data.nofactor, aes(x = MentHlth, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="MentHlth",y="Diabetes")+
   scale_color_discrete(name="diabetes", labels=diabetes_labels)
-p33 <- ggplot(data, aes(x = PhysHlth, y=factor(diabetes), color=factor(diabetes))) +
+p33 <- ggplot(data.nofactor, aes(x = PhysHlth, y=factor(diabetes), color=factor(diabetes))) +
   geom_boxplot(outlier.shape=8, outlier.size=4)+
   labs(title="PhysHlth", y="Diabetes")+
   scale_color_discrete(name="diabetes", labels=diabetes_labels)
-ggarrange(p11,p22,p33, ncol=3)
+ggarrange(p11,p22,p33)
 ```
 
 Next, we looked at the correlations between our predictor variables.
 
-```{r, echo=FALSE}
-correlations <- cor(data)
+```{r, echo=FALSE, out.width = '.7\\linewidth'}
 corrplot(correlations, method="color")
 ```
 
@@ -162,7 +197,7 @@ Several variables seem to be correlated to each other, however, random forests w
 
 
 
-## Methodology
+# Methodology
 
 Our main goal of predicting whether an individual has diabetes or is at risk requires us to focus on making the most accurate predictive algorithm. Interpretability of the model is not important for our goals since doctors know what factors lead to higher risk of diabetes; we want a model that can take into account numerous medical, behavioral, and environmental factors of an individual and based on the combination of all of these things, flag to the doctor whether they are predicted to have a high risk of being a diabetic. We are not necessarily trying to have doctors learn from our model, but rather use our algorithm as a precaution in case doctors miss the signs of diabetes. Since we are not concerned with inference, we focused on making more complex models to achieve greater predictive power.
 
@@ -174,19 +209,6 @@ We chose Random Forest over using Support Vector Machine (SVM) because SVM is in
 
 The best performing random forest was trained using the undersampled dataset where we had removed negative class observations to be balanced with the positive class. After confirming that our model outperformed any other model we created thus far, as it had extremely high accuracy and sensitivity, we trained our final model. We did a 70/30 training-test data split in which we trained the model on 70% of our data, and then validated it on the remaining 30% of unseen data to evaluate its predictive performance. This gave us confidence in our model that it is able to predict new data points very well without being overfit, and this model missed the lowest number of positive cases giving us confidence that it won’t misclassify diabetics as wrongly predicting they are not diabetic. 
 
-```{r, echo=FALSE, warning=FALSE}
-confusion = tribble(
-  ~Prediction, ~Reference, ~n,
-  "0", "0", 8987,
-  "1", "0", 889,
-  "0", "1", 1197,
-  "1", "1", 9763)
-
-plot_confusion_matrix(confusion, target_col = "Reference", 
-                      prediction_col = "Prediction", counts_col = "n")
-```
-
-
 To be absolutely sure this model was the best random forest, we tried training on the full dataset without sampling, the undersampled data, and oversampled data. For each of these methods, we trained multiple models on different subsets of the predictors, but we found that including all predictors gave the most accurate predictions every time. After trying many iterations of different models, we were confident that we found the best performing model having the highest accuracy and sensitivity. We conclude our search for and training of our predictive model, and move on to discuss the results we found from our final predictive random forest model.
 
 ```{r, echo=FALSE}
@@ -196,37 +218,98 @@ model.comparison = rbind(c("Undersampled", "90%", "89.1%"),
 
 colnames(model.comparison) = c("Training Dataset", "Accuracy", "Sensitivity")
 
-kable(model.comparison, caption = "Model Comparisons") %>%
+kable(model.comparison, caption = "Random Forest Accuracy Comparisons") %>%
   row_spec(0, bold=TRUE) %>% 
-  kable_styling(font_size=12, latex_options = "HOLD_position")
+  kable_styling(font_size=11, latex_options = "HOLD_position")
 ```
 
-## Results
+# Results
 
-Statistical analyses of the fitted model(s), and a translation of these findings into meaningful & understandable conclusions for the target audience (e.g., engineers, business managers, policy-makers, etc). See project rubric for details.
+We used our final predictive random forest model to make predictions for the hold-out testing dataset. To evaluate our model’s predictive performance, we did a 70/30 training-test data split in which we trained the model on 70% of our data, and then validated it on the remaining 30% of unseen data to evaluate its predictive performance. We produced a confusion matrix to further assess the fit and accuracy of the model, which can be seen below.
+
+```{r, echo=FALSE, warning=FALSE}
+confusion = tribble(
+  ~Prediction, ~Reference, ~n,
+  "0", "0", 8987,
+  "1", "0", 889,
+  "0", "1", 1197,
+  "1", "1", 9763)
+
+cm_plot <- plot_confusion_matrix(confusion, target_col = "Reference", 
+                      prediction_col = "Prediction", counts_col = "n")
+```
 
 
+```{r, echo=FALSE}
+confusion.info = rbind(
+  c("Accuracy", 0.9),
+  c("Specificity", 0.91),
+  c("No-information rate", 0.5),
+  c("Sensitivity", 0.89),
+  c("Precision", 0.92))
 
+# kable(confusion.info, caption = "Confusion Matrix Statistics") %>%
+#   row_spec(c(0,2), background = "yellow") %>%
+#   kable_styling(font_size=11, latex_options = "HOLD_position")
+```
 
-```{r}
+```{r, fig.cap='Model Analysis', fig.subcap= c('Confusion Matrix', 'Confusion Matrix Statistics'), out.width = '.59\\linewidth', echo = FALSE, fig.align='center'}
+tt3 <- ttheme_minimal(
+  core=list(bg_params = list(fill = blues9[2], col=NA)),
+  colhead=list(fg_params=list(col="navyblue", fontface=4L)))
+
+cm_plot
+
+grid.newpage()
+grid.table(confusion.info, theme = tt3)
+```
+
+The model was able to accurately classify 90% of the hold-out data set. On top of having a high accuracy, it has a sensitivity of 0.89, meaning that 89% of the diabetic cases were correctly predicted. One of our top goals is to have a very high proportion of diabetics correctly identified as being diabetic by the model, since we’d rather the model err on the side of false positives as opposed to false negatives, since it is significantly more detrimental for a patient to go undiagnosed as opposed to taking a blood test to find out it was a false positive. 
+
+The no-information rate is 0.5, which is the accuracy achievable by always predicting the majority class label. Since it is a balanced dataset, blindly choosing a class label gives us 50/50 odds of guessing correctly. The no-information rate is used as a baseline to know how useful our model is; since the odds are 50/50 by randomly guessing the label, then we know our model contains useful information since it achieves an accuracy of 0.9 which is significantly higher than the no-information rate.
+
+The positive predictive value, otherwise referred to as precision, is 0.92, which is the number of correctly-identified diabetics divided by the total number of times the classifier predicted “diabetic”, rightly or wrongly. 0.92 is a very high precision, meaning that the model was careful to avoid labeling non-diabetics as diabetics. 
+
+```{r, echo=FALSE, out.width = '.9\\linewidth', fig.align='center'}
 rf <- readRDS("rf_5050split.rds")
-cm
-importance(rf)
 varImpPlot(rf)
 ```
 
+By looking at the graphs of the mean decrease in accuracy and mean decrease in Gini index (or node purity), we can deduce which predictors are the most and least important in predicting whether an individual has diabetes. The most important variables that have the strongest effect on the predictive power of the model are a patient's general health, BMI, age, and whether they have high blood pressure or high cholesterol. The lesser important variables that don't have as strong predictive power in the model are whether an individual eats any fruits or vegetables, needed to but didn't go to a doctor in the past year due to costs, has healthcare, or is a smoker. 
 
-## Conclusion
+The high accuracy and sensitivity of our model indicates that it has very good predictive power, and can be very effective for identifying individuals with diabetes and indicating whether an individual is at high risk for developing diabetes. These results support both of our initial goals of trying to make a model that will help flag undiagnosed or at-risk diabetic patients, for the doctors to then run further tests if the model predicts diabetes. If a clinician sees a result that indicates diabetes risk, then they can proceed with a glucose level test to determine whether or not there is a diagnosis. If there is a diagnosis they can proceed with the medical protocols/advice established. However, what separates our model is even if there is no diagnosis, then the model still indicates that the patient was at risk, and so the patient can then be proactive in lowering their risk for Type II diabetes, and implement preventative measures. 
 
-Key findings: genHLth important predictor for diabetes.
+# Conclusion
 
 The high accuracy and high sensitivity of our model suggests that its predictive performance is very good. Therefore, our model can be very effective for identifying individuals with diabetes and indicating whether an individual is at high risk for developing diabetes. Since our data model relies on noninvasive health factors that can be gathered through a simple survey, our model can be applied in all healthcare settings, and is inclusive of all patients, regardless of their socioeconomic status. Since diabetes Type II disproportionately affects racial and ethnic minority and low-income adult populations in the U.S., our model can help people in these populations detect diabetes risk and take steps to prevent it or receive treatment sooner.
 
-The implications of our model are significant, and therefore it is important that it be used properly. For example, it could be used for harm if we were to sell it to insurance companies, who could then significantly raise premiums for high risk insurance members. Such uses would increase the burden h=that diabetes causes racial and ethnic minorities and low-income populations, and would further reduce equitable access to healthcare. Therefore, we leave our model in the hands of medical professionals in healthcare settings only. 
+The implications of our model are significant, and therefore it is important that it be used properly. For example, it could be used for harm if we were to sell it to insurance companies, who could then significantly raise premiums for high risk insurance members. Such uses would increase the burden that diabetes causes for racial and ethnic minorities and low-income populations, and would further reduce equitable access to healthcare. Additionally, our model was designed to err on the side of caution by over-predicting cases of diabetes in order to avoid missing potential cases, so insurance companies would wrongly assume individuals are at risk for or have diabetes when they in fact do not. Therefore, we leave our model in the hands of medical professionals in healthcare settings only. 
 
-Furthermore, there are some limitations to our models capabilities. Firstly, since a random forest combines multiple decision trees, it is very difficult to interpret. Therefore, the model cannot provide a patient at high risk for diabetes with feedback on which health factors were the most influential in the patients classification. As a result, they would need to make changes to their lifestyle to improve their health metrics for all predictors. Secondly, while our model is very accurate in predicting diabetes, it is not a diagnosis and cannot be used as one. Diabetes is diagnosed by measuring glucose levels in the blood, and data on glucose levels are nowhere included in our model. Thirdly, since our model is a random forest composed of a large number of trees, the algorithm can be slow to run. This could be a drawback in clinical settings where many patients are being seen at once. Thus, this limitation could potentially make our model ineffective for immediate, real-time predictions.
+Furthermore, there are some limitations to our models capabilities. Firstly, since a random forest combines multiple decision trees, it is very difficult to interpret. Therefore, the model cannot provide a patient at high risk for diabetes with feedback on which health factors were the most influential in the patients classification. This limitation can easily be combated by healthcare professionals because the causes and indicators of type II diabetes have been extensively researched and studied, so any doctor who looks at the patient's health factors will be able to determine which ones are red flags that may have triggered a positive prediction. As a reminder, the intention of this algorithm is not for interpretability, but rather to flag potential individuals who are at-risk for or have diabetes for a doctor to then further look into. Secondly, while our model is very accurate in predicting diabetes, it is not a diagnosis and cannot be used as one. Diabetes is diagnosed by measuring glucose levels in the blood, and data on glucose levels are nowhere included in our model. Thirdly, since our model is a random forest composed of a large number of trees, the algorithm can be slow to run. This could be a drawback in clinical settings where many patients are being seen at once.
 
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+confusion.over = tribble(
+  ~Prediction, ~Reference, ~n,
+  "0", "0", 49524,
+  "1", "0", 5071,
+  "0", "1", 8838,
+  "1", "1", 5452)
 
+plot_confusion_matrix(confusion.over, target_col = "Reference", 
+                      prediction_col = "Prediction", counts_col = "n")
+```
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+confusion.full = tribble(
+  ~Prediction, ~Reference, ~n,
+  "0", "0", 56887,
+  "1", "0", 8736,
+  "0", "1", 1475,
+  "1", "1", 1787)
+
+plot_confusion_matrix(confusion.full, target_col = "Reference", 
+                      prediction_col = "Prediction", counts_col = "n")
+```
 
 
 
